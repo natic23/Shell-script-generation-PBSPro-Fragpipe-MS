@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PBS FragPipe Script Generator</title>
+  <subtitle>Make sure workflow, manifest files and output folder are directly inside your mount folder</subtitle>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 6px;
+      margin-top: 4px;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px;
+      width: 100%;
+      font-size: 1rem;
+    }
+    pre {
+      background: #f0f0f0;
+      padding: 10px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+
+<h2>PBS FragPipe Submission Script Generator</h2>
+
+<label>Job name</label>
+<input id="JOBNAME" placeholder="jobname">
+
+<label>Home directory (working directory)</label>
+<input id="HOMEDIR" placeholder="$HOME">
+
+<label>Bind directory (host path)</label>
+<input id="BINDDIR" placeholder="$HOME/LC_MS">
+
+<label>Workflow file name [.workflow]</label>
+<input id="WORKFLOW" placeholder="workflow.workflow">
+
+<label>Manifest file name [.fp_manifest]</label>
+<input id="MANIFEST" placeholder="manifest.manifest">
+
+<label>Output directory</label>
+<input id="OUTPUTDIR" placeholder="/output">
+
+<label>Script Preview</label>
+<pre id="SCRIPT_PREVIEW"></pre>
+
+<button onclick="previewScript()">Preview Script</button>
+<button id="downloadBtn" style="display:none;" onclick="downloadScript()">Download Script</button>
+
+<script>
+let generatedScript = ""; // store the script for download
+
+function previewScript() {
+  const values = {
+    JOBNAME: document.getElementById("JOBNAME").value,
+    HOMEDIR: document.getElementById("HOMEDIR").value,
+    BINDDIR: document.getElementById("BINDDIR").value,
+    WORKFLOW: document.getElementById("WORKFLOW").value,
+    MANIFEST: document.getElementById("MANIFEST").value,
+    OUTPUTDIR: document.getElementById("OUTPUTDIR").value
+  };
+
+  let script = `#!/bin/bash
+#PBS -N __JOBNAME__
+#PBS -l select=1:ncpus=16:mem=256gb:cpu_type=icelake
+#PBS -l walltime=12:00:00
+
+cd __HOMEDIR__
+
+unset _JAVA_OPTIONS
+export LC_ALL=C
+export LANG=C
+
+singularity exec --bind __BINDDIR__:/data fragpipe_latest.sif \\
+  /data/Fragpipe/bin/fragpipe --headless \\
+    --workflow /data/__WORKFLOW__ \\
+    --manifest /data/__MANIFEST__ \\
+    --workdir /data/__OUTPUTDIR__ \\
+    --ram 256 \\
+    --threads 16 \\
+    --config-tools-folder /data/Fragpipe/tools \\
+    --config-python /data/miniconda/bin/python3.13
+`;
+
+  for (const key in values) {
+    script = script.replaceAll(`__${key}__`, values[key]);
+  }
+
+  // Store for download
+  generatedScript = script;
+
+  // Show preview
+  document.getElementById("SCRIPT_PREVIEW").textContent = script;
+
+  // Show download button
+  document.getElementById("downloadBtn").style.display = "block";
+}
+
+function downloadScript() {
+  if (!generatedScript) return;
+
+  // Date in DDMMYYYY format
+  const today = new Date();
+  const day = String(today.getDate()).padStart(2, '0');
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const year = today.getFullYear();
+  const formattedDate = `${day}${month}${year}`;
+
+  const blob = new Blob([generatedScript], { type: "text/plain" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `pbs_fragpipe_script_${formattedDate}.sh`;
+  link.click();
+}
+</script>
+
+</body>
+</html>
