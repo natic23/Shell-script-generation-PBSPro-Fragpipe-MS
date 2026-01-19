@@ -86,7 +86,7 @@ export LC_ALL=C
 export LANG=C
 
 singularity exec --bind __BINDDIR__:/data fragpipe_latest.sif \\
-  /data/Fragpipe/bin/fragpipe --headless \\
+  /data/fragpipe-23.1/bin/fragpipe --headless \\
     --workflow /data/__WORKFLOW__ \\
     --manifest /data/__MANIFEST__ \\
     --workdir /data/__OUTPUTDIR__ \\
